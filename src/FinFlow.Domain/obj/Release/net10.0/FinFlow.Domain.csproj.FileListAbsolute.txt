@@ -1,0 +1,11 @@
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\bin\Release\net10.0\FinFlow.Domain.deps.json
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\bin\Release\net10.0\FinFlow.Domain.dll
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\bin\Release\net10.0\FinFlow.Domain.pdb
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.AssemblyInfoInputs.cache
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.AssemblyInfo.cs
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.csproj.CoreCompileInputs.cache
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.dll
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\refint\FinFlow.Domain.dll
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\FinFlow.Domain.pdb
+C:\Users\vitor\OneDrive\Documentos\portfolio\FinFlow\src\FinFlow.Domain\obj\Release\net10.0\ref\FinFlow.Domain.dll

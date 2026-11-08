@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens do FinFlow.
+ * Tudo que é cor de marca, superfície ou série de gráfico vive aqui para que
+ * componentes usem papéis (bg-surface, text-ink-muted, bg-inflow...) e não hex.
+ */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Superfícies */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-line: #e7e9ee;
+  --color-line-strong: #d5d9e1;
+
+  /* Tinta (texto) */
+  --color-ink: #0b1220;
+  --color-ink-secondary: #4a5468;
+  --color-ink-muted: #7a8396;
+
+  /* Navegação (sidebar escura) */
+  --color-nav: #0b1220;
+  --color-nav-raised: #141d2e;
+  --color-nav-line: #1f2a3d;
+  --color-nav-ink: #c4cad6;
+  --color-nav-ink-muted: #7c8599;
+
+  /* Marca */
+  --color-brand-50: #ecfbf5;
+  --color-brand-100: #d1f5e7;
+  --color-brand-400: #2dd4a7;
+  --color-brand-500: #12b58a;
+  --color-brand-600: #0f9f78;
+  --color-brand-700: #0b7d5f;
+
+  /* Séries do gráfico — validadas para CVD e contraste sobre a superfície clara */
+  --color-inflow: #0f9f78;
+  --color-outflow: #5b5bd6;
+
+  /* Status (reservados: nunca usados como série) */
+  --color-positive: #0b7d5f;
+  --color-positive-soft: #e6f7f0;
+  --color-warning: #a15c07;
+  --color-warning-soft: #fdf3e1;
+  --color-info: #2b5fc7;
+  --color-info-soft: #e9f0fd;
+  --color-critical: #c2372f;
+  --color-critical-soft: #fdecea;
+  --color-neutral: #5b6477;
+  --color-neutral-soft: #eef0f4;
+
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.04), 0 1px 3px rgb(11 18 32 / 0.04);
+  --shadow-pop: 0 8px 24px -6px rgb(11 18 32 / 0.18), 0 2px 6px rgb(11 18 32 / 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controles de formulário (input, select): mesma altura e borda dos botões. */
+@utility field-control {
+  @apply h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink shadow-card transition-colors;
+  @apply placeholder:text-ink-muted hover:border-line-strong focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  @apply disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-muted;
+  &[aria-invalid='true'] {
+    @apply border-critical focus:border-critical focus:ring-critical/20;
+  }
+}

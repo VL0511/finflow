@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-FinFlow.Worker-0d40a365-12fa-4342-8b02-7da26a42214c</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinFlow.Application\FinFlow.Application.csproj" />
+    <ProjectReference Include="..\FinFlow.Infrastructure\FinFlow.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

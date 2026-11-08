@@ -1,0 +1,80 @@
+@host = http://localhost:5017
+@transactionId = 00000000-0000-0000-0000-000000000000
+@anaId = 11111111-1111-1111-1111-111111111111
+
+### ===== Contas =====
+
+### Listar contas — paginado (padrão page=1, pageSize=10; máx. 100)
+GET {{host}}/api/accounts?page=1&pageSize=10
+
+### Resumo das contas (quantidades e saldos por moeda, todas as contas)
+GET {{host}}/api/accounts/summary
+
+### Entradas/saídas liquidadas por dia (fuso de Brasília)
+GET {{host}}/api/accounts/{{anaId}}/cash-flow?from=2026-11-01&to=2026-11-07&utcOffsetMinutes=-180
+
+### Consultar conta
+GET {{host}}/api/accounts/{{anaId}}
+
+### Consultar saldo
+GET {{host}}/api/accounts/{{anaId}}/balance
+
+### Criar conta fictícia
+POST {{host}}/api/accounts
+Content-Type: application/json
+
+{
+  "accountNumber": "99887",
+  "holderName": "Fernanda Lima",
+  "initialBalance": 1500.00,
+  "currency": "BRL",
+  "isActive": true
+}
+
+### ===== Transações =====
+
+### Listar transações — paginado, filtros opcionais (status separados por vírgula, conta origem/destino)
+GET {{host}}/api/transactions?page=1&pageSize=10&status=Pending,Processing&accountNumber=12345
+
+### Contagem por status (todas as transações)
+GET {{host}}/api/transactions/summary
+
+### Transferir R$ 500 de Ana para Bruno (Worker processa em seguida)
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{
+  "sourceAccount": "12345",
+  "destinationAccount": "67890",
+  "amount": 500.00
+}
+
+### Falha: saldo insuficiente (Bruno tem R$ 250)
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{ "sourceAccount": "67890", "destinationAccount": "12345", "amount": 5000 }
+
+### Falha: moedas incompatíveis (BRL -> USD)
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{ "sourceAccount": "12345", "destinationAccount": "11223", "amount": 10 }
+
+### Falha: conta de destino inativa
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{ "sourceAccount": "12345", "destinationAccount": "44556", "amount": 10 }
+
+### Listar transações
+GET {{host}}/api/transactions
+
+### Consultar por ID
+GET {{host}}/api/transactions/{{transactionId}}
+
+### Consultar status
+GET {{host}}/api/transactions/{{transactionId}}/status
+
+### Solicitar cancelamento (somente Pending)
+PATCH {{host}}/api/transactions/{{transactionId}}/cancel

@@ -1,0 +1,1134 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "FinFlow API",
+    "description": "API de transações financeiras do FinFlow.\n\n### Fluxo de uma transferência\n1. `POST /api/transactions` registra a transação como **Pending** e publica `TransactionRequested` no RabbitMQ (via outbox).\n2. O **Worker** consome a mensagem e muda para **Processing**.\n3. O Worker valida as contas (existência, situação, saldo e moeda).\n4. Débito, crédito e status final são gravados numa única transação SQL: **Completed** ou **Failed** (com motivo).\n\n### Ciclo de vida do status\n| Transição | Quem faz |\n|---|---|\n| Pending → Processing | Worker |\n| Processing → Completed | Worker, no mesmo commit do débito e crédito |\n| Processing → Failed | Worker, registrando o motivo |\n| Pending → Cancelled | Cliente, via `PATCH /api/transactions/{id}/cancel` |\n\nNão existe endpoint para alterar o status livremente: o status precisa refletir o que de fato\naconteceu com os saldos, e é ele que garante a idempotência do Worker.\n\n### Contas fictícias disponíveis\n| Conta | Titular | Saldo | Moeda | Situação |\n|---|---|---|---|---|\n| 12345 | Ana Souza | 1.000,00 | BRL | Ativa |\n| 67890 | Bruno Lima | 250,00 | BRL | Ativa |\n| 11223 | Carla Mendes | 5.000,00 | USD | Ativa |\n| 44556 | Diego Rocha | 300,00 | BRL | Inativa |",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/accounts": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Cria uma conta fictícia.",
+        "description": "Contas já disponíveis para teste: 12345 (Ana, R$ 1.000, BRL), 67890 (Bruno, R$ 250, BRL),\r\n11223 (Carla, US$ 5.000, USD) e 44556 (Diego, R$ 300, BRL, inativa).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conta criada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Número de conta já existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Lista as contas, paginadas e ordenadas pelo número da conta.",
+        "description": "Valores fora da faixa são normalizados (e devolvidos na resposta): `page` < 1 vira 1;\r\n`pageSize` ausente ou < 1 vira 10; acima de 100 vira 100. Página além da última\r\ndevolve `items` vazio com os totais corretos.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Página (começa em 1). Padrão: 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Registros por página. Padrão: 10; máximo: 100.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de contas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponsePagedResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parâmetro não numérico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/summary": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Indicadores globais das contas (quantidades e saldos por moeda).",
+        "description": "Calculado no banco sobre todas as contas — não depende da paginação.",
+        "responses": {
+          "200": {
+            "description": "Resumo das contas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Consulta uma conta pelo ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da conta (ex.: 11111111-1111-1111-1111-111111111111).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conta encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conta não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}/balance": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Consulta o saldo de uma conta.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da conta.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saldo atual.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBalanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conta não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}/cash-flow": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Entradas e saídas liquidadas da conta, por dia.",
+        "description": "Considera apenas transferências `Completed`, na data da liquidação (`updatedAt`)\r\nno fuso informado. Entrada = conta é destino; saída = conta é origem. Somente dias com\r\nmovimento são retornados. Período máximo: 731 dias.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da conta.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "From",
+            "in": "query",
+            "description": "Primeiro dia (inclusivo, no fuso de FinFlow.Application.Transactions.AccountCashFlowQuery.UtcOffsetMinutes). Padrão: `To` − 29 dias.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "To",
+            "in": "query",
+            "description": "Último dia (inclusivo). Padrão: hoje no fuso informado.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "UtcOffsetMinutes",
+            "in": "query",
+            "description": "Deslocamento do fuso do cliente em relação ao UTC, em minutos (ex.: -180 para Brasília).\r\nDefine em que dia cada liquidação cai. Padrão: 0 (UTC).",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Série diária.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountCashFlowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Período ou fuso inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conta não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Solicita uma transferência.",
+        "description": "A transação é registrada como `Pending` e enviada ao RabbitMQ. O Worker a processa\r\nem seguida (`Processing` → `Completed` ou `Failed`). Acompanhe pelo\r\n`GET /api/transactions/{id}/status`.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Transferência aceita para processamento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Conta de origem ou destino inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Lista as transações, paginadas, da mais recente para a mais antiga.",
+        "description": "Filtros opcionais, combinados entre si e aplicados antes da paginação (`totalItems`\r\nconta só o que atende aos filtros):\r\n- `status`: um ou mais status, repetidos (`status=Pending&status=Processing`)\r\n  ou separados por vírgula (`status=Pending,Processing`);\r\n- `accountNumber`: conta presente como origem ou destino.\r\n            \r\nPaginação: `page` padrão 1; `pageSize` padrão 10, máximo 100 (valores fora da\r\nfaixa são normalizados e devolvidos na resposta).",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Página (começa em 1). Padrão: 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Registros por página. Padrão: 10; máximo: 100.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Status aceitos (Pending, Processing, Completed, Failed, Cancelled).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "accountNumber",
+            "in": "query",
+            "description": "Número da conta (origem ou destino).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de transações.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponsePagedResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Status inválido ou parâmetro não numérico.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions/summary": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Quantidade de transações por status (todas as transações).",
+        "description": "Calculado no banco — não depende da paginação.",
+        "responses": {
+          "200": {
+            "description": "Contagens por status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions/{id}": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Consulta uma transação pelo ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da transação.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transação encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Transação não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions/{id}/status": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Consulta o status atual de uma transação.",
+        "description": "Use após o `POST` para acompanhar o processamento assíncrono.\r\n            \r\nStatus possíveis:\r\n- `Pending`: aguardando o Worker (pode ser cancelada)\r\n- `Processing`: em processamento pelo Worker\r\n- `Completed`: saldos movimentados com sucesso\r\n- `Failed`: rejeitada; o motivo vem em `failureReason`\r\n- `Cancelled`: cancelada pelo cliente antes do processamento\r\n            \r\nO status é alterado apenas pelo Worker e pelo endpoint de cancelamento.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da transação.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status atual (e motivo, se falhou).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Transação não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions/{id}/cancel": {
+      "patch": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Solicita o cancelamento de uma transação.",
+        "description": "Só é possível enquanto a transação está `Pending`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID da transação.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transação cancelada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Transação não encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A transação já está em processamento ou finalizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-0000-0000-0000-000000000001"
+          },
+          "accountNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "balance": {
+            "type": "number",
+            "format": "double",
+            "example": 1000.00
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "BRL"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccountCashFlowResponse": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "BRL"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "utcOffsetMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "example": -180
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyCashFlow"
+            },
+            "description": "Somente os dias com movimento, em ordem crescente (dias ausentes = sem movimento).",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Série diária de movimentações liquidadas de uma conta (GET /api/accounts/{id}/cash-flow)."
+      },
+      "AccountCurrencySummary": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "BRL"
+          },
+          "accounts": {
+            "type": "integer",
+            "description": "Quantidade de contas nesta moeda.",
+            "format": "int32",
+            "example": 3
+          },
+          "activeAccounts": {
+            "type": "integer",
+            "description": "Contas ativas nesta moeda.",
+            "format": "int32",
+            "example": 2
+          },
+          "totalBalance": {
+            "type": "number",
+            "description": "Soma dos saldos de todas as contas nesta moeda (ativas e inativas).",
+            "format": "double",
+            "example": 1550.00
+          }
+        },
+        "additionalProperties": false,
+        "description": "Totais de uma moeda (GET /api/accounts/summary). Sem conversão cambial."
+      },
+      "AccountResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-0000-0000-0000-000000000001"
+          },
+          "accountNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "holderName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Ana Souza"
+          },
+          "balance": {
+            "type": "number",
+            "format": "double",
+            "example": 1000.00
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "BRL"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccountResponsePagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountResponse"
+            },
+            "description": "Registros da página (vazio se a página estiver além da última).",
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "description": "Página efetivamente retornada (começa em 1).",
+            "format": "int32",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Tamanho de página efetivamente aplicado (máx. 100).",
+            "format": "int32",
+            "example": 10
+          },
+          "totalItems": {
+            "type": "integer",
+            "description": "Total de registros que atendem aos filtros (todas as páginas).",
+            "format": "int32",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total de páginas (0 quando não há registros).",
+            "format": "int32",
+            "example": 5
+          },
+          "hasPreviousPage": {
+            "type": "boolean",
+            "example": false
+          },
+          "hasNextPage": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Resposta paginada padrão das listagens."
+      },
+      "AccountSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "totalAccounts": {
+            "type": "integer",
+            "format": "int32",
+            "example": 4
+          },
+          "activeAccounts": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "inactiveAccounts": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountCurrencySummary"
+            },
+            "description": "Totais por moeda, em ordem alfabética de moeda.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Indicadores globais de contas, calculados no banco (independem da paginação)."
+      },
+      "CreateAccountRequest": {
+        "type": "object",
+        "properties": {
+          "accountNumber": {
+            "type": "string",
+            "description": "Número da conta (somente dígitos, máx. 20).",
+            "nullable": true,
+            "example": "99887"
+          },
+          "holderName": {
+            "type": "string",
+            "description": "Nome do titular.",
+            "nullable": true,
+            "example": "Fernanda Lima"
+          },
+          "initialBalance": {
+            "type": "number",
+            "description": "Saldo inicial (não pode ser negativo).",
+            "format": "double",
+            "example": 1500.00
+          },
+          "currency": {
+            "type": "string",
+            "description": "Moeda: BRL, USD ou EUR.",
+            "nullable": true,
+            "example": "BRL"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Se a conta nasce ativa. Use false para testar a regra de conta inativa.",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Dados para criação de uma conta fictícia."
+      },
+      "CreateTransactionRequest": {
+        "type": "object",
+        "properties": {
+          "sourceAccount": {
+            "type": "string",
+            "description": "Número da conta de origem.",
+            "nullable": true,
+            "example": "12345"
+          },
+          "destinationAccount": {
+            "type": "string",
+            "description": "Número da conta de destino. Deve ser diferente da origem.",
+            "nullable": true,
+            "example": "67890"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Valor da transferência. Maior que zero, com até 2 casas decimais.",
+            "format": "double",
+            "example": 500.00
+          }
+        },
+        "additionalProperties": false,
+        "description": "Dados para solicitar uma transferência."
+      },
+      "DailyCashFlow": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-11-06"
+          },
+          "inflow": {
+            "type": "number",
+            "description": "Soma das transferências concluídas em que a conta é destino.",
+            "format": "double",
+            "example": 500.00
+          },
+          "outflow": {
+            "type": "number",
+            "description": "Soma das transferências concluídas em que a conta é origem.",
+            "format": "double",
+            "example": 120.00
+          }
+        },
+        "additionalProperties": false,
+        "description": "Entradas e saídas liquidadas de uma conta em um dia (agregado no banco)."
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "TransactionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador gerado pela API.",
+            "format": "uuid",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "sourceAccount": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "destinationAccount": {
+            "type": "string",
+            "nullable": true,
+            "example": "67890"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "example": 500.00
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "BRL"
+          },
+          "status": {
+            "type": "string",
+            "description": "Pending, Processing, Completed, Failed ou Cancelled.",
+            "nullable": true,
+            "example": "Pending"
+          },
+          "failureReason": {
+            "type": "string",
+            "description": "Motivo da falha, quando Status = Failed.",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Representação de uma transação."
+      },
+      "TransactionResponsePagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionResponse"
+            },
+            "description": "Registros da página (vazio se a página estiver além da última).",
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "description": "Página efetivamente retornada (começa em 1).",
+            "format": "int32",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Tamanho de página efetivamente aplicado (máx. 100).",
+            "format": "int32",
+            "example": 10
+          },
+          "totalItems": {
+            "type": "integer",
+            "description": "Total de registros que atendem aos filtros (todas as páginas).",
+            "format": "int32",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total de páginas (0 quando não há registros).",
+            "format": "int32",
+            "example": 5
+          },
+          "hasPreviousPage": {
+            "type": "boolean",
+            "example": false
+          },
+          "hasNextPage": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Resposta paginada padrão das listagens."
+      },
+      "TransactionStatusResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "status": {
+            "type": "string",
+            "description": "Pending, Processing, Completed, Failed ou Cancelled.",
+            "nullable": true,
+            "example": "Completed"
+          },
+          "failureReason": {
+            "type": "string",
+            "description": "Motivo da falha, quando Status = Failed.",
+            "nullable": true,
+            "example": null
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Data da última mudança de status.",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Situação atual de uma transação (GET /api/transactions/{id}/status)."
+      },
+      "TransactionSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "totalTransactions": {
+            "type": "integer",
+            "format": "int32",
+            "example": 11
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "processing": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "completed": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32",
+            "example": 4
+          },
+          "cancelled": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          }
+        },
+        "additionalProperties": false,
+        "description": "Contagem global de transações por status (GET /api/transactions/summary)."
+      },
+      "ValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Accounts"
+    },
+    {
+      "name": "Transactions"
+    }
+  ]
+}

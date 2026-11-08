@@ -1,0 +1,405 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FinFlow.API</name>
+    </assembly>
+    <members>
+        <member name="T:FinFlow.API.Controllers.AccountsController">
+            <summary>
+            Contas. Customer enxerga só as próprias; Administrator e Treasurer, todas. Conta fora do
+            escopo responde 404 (não revela que existe).
+            </summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.#ctor(FinFlow.Application.Accounts.IAccountService,FinFlow.Application.Transactions.ITransactionService)">
+            <summary>
+            Contas. Customer enxerga só as próprias; Administrator e Treasurer, todas. Conta fora do
+            escopo responde 404 (não revela que existe).
+            </summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.Create(FinFlow.Application.Accounts.CreateAccountRequest,System.Threading.CancellationToken)">
+             <summary>Abre uma conta; o número é gerado pelo backend.</summary>
+             <remarks>
+             O número (10 dígitos, com dígito verificador) é gerado e garantido único pelo servidor e
+             volta na resposta. Customer abre conta para si; Administrator pode indicar o dono
+             (<c>ownerUserId</c>) ou omiti-lo (conta institucional). A moeda precisa estar ativa.
+            
+             Contas legadas para teste: 12345 (Ana, R$ 1.000, BRL), 67890 (Bruno, R$ 250, BRL),
+             11223 (Carla, US$ 5.000, USD) e 44556 (Diego, R$ 300, BRL, inativa).
+             </remarks>
+             <response code="201">Conta criada.</response>
+             <response code="400">Dados inválidos.</response>
+             <response code="403">Perfil sem permissão (Treasurer não abre contas).</response>
+             <response code="422">Moeda inexistente/desativada ou dono inválido.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.List(System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>Lista as contas, paginadas e ordenadas pelo número da conta.</summary>
+            <remarks>
+            Valores fora da faixa são normalizados (e devolvidos na resposta): <c>page</c> &lt; 1 vira 1;
+            <c>pageSize</c> ausente ou &lt; 1 vira 10; acima de 100 vira 100. Página além da última
+            devolve <c>items</c> vazio com os totais corretos.
+            </remarks>
+            <param name="page">Página (começa em 1). Padrão: 1.</param>
+            <param name="pageSize">Registros por página. Padrão: 10; máximo: 100.</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Página de contas.</response>
+            <response code="400">Parâmetro não numérico.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.Summary(System.Threading.CancellationToken)">
+            <summary>Indicadores globais das contas (quantidades e saldos por moeda).</summary>
+            <remarks>Calculado no banco sobre todas as contas — não depende da paginação.</remarks>
+            <response code="200">Resumo das contas.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.GetById(System.Guid,System.Threading.CancellationToken)">
+            <summary>Consulta uma conta pelo ID.</summary>
+            <param name="id">ID da conta (ex.: 11111111-1111-1111-1111-111111111111).</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Conta encontrada.</response>
+            <response code="404">Conta não encontrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.GetBalance(System.Guid,System.Threading.CancellationToken)">
+            <summary>Consulta o saldo de uma conta.</summary>
+            <param name="id">ID da conta.</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Saldo atual.</response>
+            <response code="404">Conta não encontrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AccountsController.CashFlow(System.Guid,FinFlow.Application.Transactions.AccountCashFlowQuery,System.Threading.CancellationToken)">
+            <summary>Entradas e saídas liquidadas da conta, por dia.</summary>
+            <remarks>
+            Considera apenas transferências <c>Completed</c>, na data da liquidação (<c>updatedAt</c>)
+            no fuso informado. Entrada = conta é destino; saída = conta é origem. Somente dias com
+            movimento são retornados. Período máximo: 731 dias.
+            </remarks>
+            <param name="id">ID da conta.</param>
+            <param name="query">Período (from/to, inclusivos) e fuso (utcOffsetMinutes, ex.: -180).</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Série diária.</response>
+            <response code="400">Período ou fuso inválido.</response>
+            <response code="404">Conta não encontrada.</response>
+        </member>
+        <member name="T:FinFlow.API.Controllers.UsersController">
+            <summary>Usuários e perfis (somente Administrator).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.#ctor(FinFlow.Application.Users.IUserManagementService)">
+            <summary>Usuários e perfis (somente Administrator).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.List(System.Nullable{System.Int32},System.Nullable{System.Int32},System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Lista os usuários (paginado, por e-mail).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.Get(System.String,System.Threading.CancellationToken)">
+            <summary>Consulta um usuário.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.Create(FinFlow.Application.Users.CreateUserRequest,System.Threading.CancellationToken)">
+            <summary>Cria um usuário com perfil e senha inicial.</summary>
+            <response code="201">Criado.</response>
+            <response code="400">Dados inválidos ou senha fora da política (mín. 10 caracteres, maiúscula, minúscula e dígito).</response>
+            <response code="409">E-mail já cadastrado.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.Update(System.String,FinFlow.Application.Users.UpdateUserRequest,System.Threading.CancellationToken)">
+            <summary>Altera nome, perfil ou situação (ativo/inativo).</summary>
+            <remarks>Ninguém altera o próprio perfil nem desativa a si mesmo.</remarks>
+            <response code="403">Tentativa de alterar o próprio perfil ou se desativar.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.UsersController.ResetPassword(System.String,FinFlow.Application.Users.ResetPasswordRequest,System.Threading.CancellationToken)">
+            <summary>Define uma senha temporária (troca exigida no próximo login; sessões abertas caem).</summary>
+        </member>
+        <member name="T:FinFlow.API.Controllers.AuditLogsController">
+            <summary>Auditoria (somente leitura, somente Administrator).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuditLogsController.#ctor(FinFlow.Application.Common.IAuditLogReader)">
+            <summary>Auditoria (somente leitura, somente Administrator).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuditLogsController.List(System.Nullable{System.Int32},System.Nullable{System.Int32},FinFlow.Application.Common.AuditLogQuery,System.Threading.CancellationToken)">
+            <summary>Registros de auditoria, mais recentes primeiro.</summary>
+        </member>
+        <member name="T:FinFlow.API.Controllers.CurrenciesController">
+            <summary>Moedas. Consulta: todos os perfis; cadastro e ativação: Administrator.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.CurrenciesController.#ctor(FinFlow.Application.Currencies.ICurrencyService)">
+            <summary>Moedas. Consulta: todos os perfis; cadastro e ativação: Administrator.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.CurrenciesController.List(System.Boolean,System.Threading.CancellationToken)">
+            <summary>Moedas cadastradas.</summary>
+            <param name="includeInactive">Incluir desativadas (efetivo só para Administrator).</param>
+            <param name="cancellationToken"></param>
+        </member>
+        <member name="M:FinFlow.API.Controllers.CurrenciesController.Create(FinFlow.Application.Currencies.CreateCurrencyRequest,System.Threading.CancellationToken)">
+            <summary>Cadastra uma moeda.</summary>
+            <response code="409">Moeda já cadastrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.CurrenciesController.Update(System.String,FinFlow.Application.Currencies.UpdateCurrencyRequest,System.Threading.CancellationToken)">
+            <summary>Renomeia, ativa ou desativa uma moeda.</summary>
+        </member>
+        <member name="T:FinFlow.API.Controllers.ExchangeRatesController">
+            <summary>Taxas de câmbio (manuais). Consulta das vigentes e cotação: todos; alteração e histórico: Administrator.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.#ctor(FinFlow.Application.Currencies.IExchangeRateService)">
+            <summary>Taxas de câmbio (manuais). Consulta das vigentes e cotação: todos; alteração e histórico: Administrator.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.ListActive(System.Threading.CancellationToken)">
+            <summary>Taxas vigentes.</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.Quote(System.String,System.String,System.Decimal,System.Threading.CancellationToken)">
+            <summary>Converte um valor com a taxa vigente (cálculo no backend).</summary>
+            <response code="422">Moeda inexistente/desativada ou sem taxa vigente.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.History(System.String,System.String,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>Histórico de todas as versões de taxas (vigentes e encerradas).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.Set(FinFlow.Application.Currencies.SetExchangeRateRequest,System.Threading.CancellationToken)">
+            <summary>Define a taxa vigente de uma direção (cria nova versão; a anterior é encerrada).</summary>
+            <remarks>A direção é explícita: USD→BRL não define BRL→USD. Transações já criadas não mudam.</remarks>
+            <response code="201">Nova taxa vigente.</response>
+            <response code="409">Alteração simultânea da mesma taxa.</response>
+            <response code="422">Moeda inexistente ou desativada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.ExchangeRatesController.Deactivate(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Encerra a taxa vigente de uma direção (conversões nessa direção passam a ser recusadas).</summary>
+        </member>
+        <member name="P:FinFlow.API.Controllers.LoginRequest.Email">
+            <example>admin@finflow.com</example>
+        </member>
+        <member name="P:FinFlow.API.Controllers.LoginRequest.Password">
+            <example>admin</example>
+        </member>
+        <member name="P:FinFlow.API.Controllers.LoginRequest.RememberMe">
+            <summary>Mantém a sessão após fechar o navegador (ainda sujeita à expiração por inatividade).</summary>
+        </member>
+        <member name="T:FinFlow.API.Controllers.MeResponse">
+            <summary>Usuário autenticado (GET /api/auth/me).</summary>
+        </member>
+        <member name="P:FinFlow.API.Controllers.MeResponse.Role">
+            <summary>Administrator, Treasurer ou Customer. Apenas informativo: o backend sempre reaplica as permissões.</summary>
+        </member>
+        <member name="T:FinFlow.API.Controllers.AuthController">
+            <summary>Autenticação por e-mail e senha (cookie de sessão HttpOnly).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuthController.#ctor(Microsoft.AspNetCore.Identity.SignInManager{FinFlow.Infrastructure.Identity.AppUser},Microsoft.AspNetCore.Identity.UserManager{FinFlow.Infrastructure.Identity.AppUser},FinFlow.Application.Common.IAuditTrail,FinFlow.Application.Common.IUnitOfWork)">
+            <summary>Autenticação por e-mail e senha (cookie de sessão HttpOnly).</summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuthController.Login(FinFlow.API.Controllers.LoginRequest,System.Threading.CancellationToken)">
+            <summary>Entra no sistema.</summary>
+            <remarks>
+            Em desenvolvimento, o administrador inicial é admin@finflow.com / admin (troca obrigatória
+            no primeiro login). Após 5 senhas erradas o usuário fica bloqueado por 15 minutos; o IP
+            também é limitado a 10 tentativas por minuto.
+            </remarks>
+            <response code="200">Autenticado; o cookie de sessão foi emitido.</response>
+            <response code="401">Credenciais inválidas ou usuário desativado.</response>
+            <response code="423">Usuário bloqueado temporariamente por tentativas inválidas.</response>
+            <response code="429">Muitas tentativas a partir deste IP.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuthController.Logout">
+            <summary>Encerra a sessão.</summary>
+            <response code="204">Sessão encerrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuthController.Me">
+            <summary>Usuário da sessão atual.</summary>
+            <response code="200">Dados do usuário.</response>
+            <response code="401">Sem sessão ou sessão expirada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.AuthController.ChangePassword(FinFlow.API.Controllers.ChangePasswordRequest,System.Threading.CancellationToken)">
+            <summary>Troca a própria senha (obrigatório no primeiro login).</summary>
+            <response code="200">Senha alterada; a sessão é renovada.</response>
+            <response code="400">Senha atual incorreta ou nova senha fora da política.</response>
+        </member>
+        <member name="T:FinFlow.API.Controllers.TransactionsController">
+            <summary>
+            Transferências entre contas (processadas de forma assíncrona pelo Worker). Customer opera e
+            consulta só o que envolve as próprias contas; Administrator e Treasurer, tudo.
+            </summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.#ctor(FinFlow.Application.Transactions.ITransactionService)">
+            <summary>
+            Transferências entre contas (processadas de forma assíncrona pelo Worker). Customer opera e
+            consulta só o que envolve as próprias contas; Administrator e Treasurer, tudo.
+            </summary>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.Create(FinFlow.Application.Transactions.CreateTransactionRequest,System.Threading.CancellationToken)">
+            <summary>Solicita uma transferência.</summary>
+            <remarks>
+            A transação é registrada como <c>Pending</c> e enviada ao RabbitMQ. O Worker a processa
+            em seguida (<c>Processing</c> → <c>Completed</c> ou <c>Failed</c>). Acompanhe pelo
+            <c>GET /api/transactions/{id}/status</c>.
+            </remarks>
+            <response code="202">Transferência aceita para processamento.</response>
+            <response code="400">Dados inválidos.</response>
+            <response code="422">Conta inexistente/fora do seu escopo, moeda desativada ou sem taxa de câmbio vigente.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.Preview(FinFlow.Application.Transactions.CreateTransactionRequest,System.Threading.CancellationToken)">
+            <summary>Prévia de uma transferência: moedas, taxa vigente e valor a receber.</summary>
+            <remarks>
+            Mesmo cálculo da criação, sem gravar nada. A criação recalcula tudo no momento em que é
+            feita — se a taxa mudar entre a prévia e a confirmação, vale a da criação.
+            </remarks>
+            <response code="200">Prévia calculada.</response>
+            <response code="400">Dados inválidos.</response>
+            <response code="422">Conta inexistente/fora do seu escopo, moeda desativada ou sem taxa vigente.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.List(System.Nullable{System.Int32},System.Nullable{System.Int32},System.String[],System.String,System.Threading.CancellationToken)">
+             <summary>Lista as transações, paginadas, da mais recente para a mais antiga.</summary>
+             <remarks>
+             Filtros opcionais, combinados entre si e aplicados antes da paginação (<c>totalItems</c>
+             conta só o que atende aos filtros):
+             - <c>status</c>: um ou mais status, repetidos (<c>status=Pending&amp;status=Processing</c>)
+               ou separados por vírgula (<c>status=Pending,Processing</c>);
+             - <c>accountNumber</c>: conta presente como origem ou destino.
+            
+             Paginação: <c>page</c> padrão 1; <c>pageSize</c> padrão 10, máximo 100 (valores fora da
+             faixa são normalizados e devolvidos na resposta).
+             </remarks>
+             <param name="page">Página (começa em 1). Padrão: 1.</param>
+             <param name="pageSize">Registros por página. Padrão: 10; máximo: 100.</param>
+             <param name="status">Status aceitos (Pending, Processing, Completed, Failed, Cancelled).</param>
+             <param name="accountNumber">Número da conta (origem ou destino).</param>
+             <param name="cancellationToken"></param>
+             <response code="200">Página de transações.</response>
+             <response code="400">Status inválido ou parâmetro não numérico.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.Summary(System.Threading.CancellationToken)">
+            <summary>Quantidade de transações por status (todas as transações).</summary>
+            <remarks>Calculado no banco — não depende da paginação.</remarks>
+            <response code="200">Contagens por status.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.GetById(System.Guid,System.Threading.CancellationToken)">
+            <summary>Consulta uma transação pelo ID.</summary>
+            <param name="id">ID da transação.</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Transação encontrada.</response>
+            <response code="404">Transação não encontrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.GetStatus(System.Guid,System.Threading.CancellationToken)">
+             <summary>Consulta o status atual de uma transação.</summary>
+             <remarks>
+             Use após o <c>POST</c> para acompanhar o processamento assíncrono.
+            
+             Status possíveis:
+             - <c>Pending</c>: aguardando o Worker (pode ser cancelada)
+             - <c>Processing</c>: em processamento pelo Worker
+             - <c>Completed</c>: saldos movimentados com sucesso
+             - <c>Failed</c>: rejeitada; o motivo vem em <c>failureReason</c>
+             - <c>Cancelled</c>: cancelada pelo cliente antes do processamento
+            
+             O status é alterado apenas pelo Worker e pelo endpoint de cancelamento.
+             </remarks>
+             <param name="id">ID da transação.</param>
+             <param name="cancellationToken"></param>
+             <response code="200">Status atual (e motivo, se falhou).</response>
+             <response code="404">Transação não encontrada.</response>
+        </member>
+        <member name="M:FinFlow.API.Controllers.TransactionsController.Cancel(System.Guid,System.Threading.CancellationToken)">
+            <summary>Solicita o cancelamento de uma transação.</summary>
+            <remarks>Só é possível enquanto a transação está <c>Pending</c>.</remarks>
+            <param name="id">ID da transação.</param>
+            <param name="cancellationToken"></param>
+            <response code="200">Transação cancelada.</response>
+            <response code="404">Transação não encontrada.</response>
+            <response code="409">A transação já está em processamento ou finalizada.</response>
+        </member>
+        <member name="T:FinFlow.API.Security.Policies">
+            <summary>
+            Policies de autorização — ÚNICO lugar que liga perfis a capacidades. Controllers só
+            referenciam os nomes. Para permissões mais finas no futuro (aprovação, limites, dupla
+            autorização), novas policies/requirements entram aqui sem espalhar checagens pelo código.
+            </summary>
+        </member>
+        <member name="F:FinFlow.API.Security.Policies.Authenticated">
+            <summary>Apenas autenticado (inclusive com troca de senha pendente): /me, troca de senha, logout.</summary>
+        </member>
+        <member name="F:FinFlow.API.Security.Policies.Banking">
+            <summary>Operar contas e transferências no próprio escopo: todos os perfis.</summary>
+        </member>
+        <member name="F:FinFlow.API.Security.Policies.AccountOpening">
+            <summary>Abrir conta: Administrator (para qualquer usuário) e Customer (para si).</summary>
+        </member>
+        <member name="F:FinFlow.API.Security.Policies.Operations">
+            <summary>Operações da instituição: Administrator e Treasurer.</summary>
+        </member>
+        <member name="F:FinFlow.API.Security.Policies.Administration">
+            <summary>Administração: usuários, perfis, moedas, taxas, auditoria. Só Administrator.</summary>
+        </member>
+        <member name="F:FinFlow.API.Security.FinFlowClaims.MustChangePassword">
+            <summary>Presente enquanto o usuário precisa trocar a senha: bloqueia tudo exceto /auth.</summary>
+        </member>
+        <member name="T:FinFlow.API.Security.AuthOptions">
+            <summary>Opções de sessão e proteção do login (seção Auth).</summary>
+        </member>
+        <member name="P:FinFlow.API.Security.AuthOptions.SessionTimeout">
+            <summary>Inatividade máxima da sessão (expiração deslizante).</summary>
+        </member>
+        <member name="P:FinFlow.API.Security.AuthOptions.SecurityStampValidationInterval">
+            <summary>
+            A cada quanto o cookie é revalidado contra o banco (security stamp): perfil alterado,
+            usuário desativado ou senha redefinida derrubam a sessão em no máximo este tempo.
+            </summary>
+        </member>
+        <member name="P:FinFlow.API.Security.AuthOptions.LoginAttemptsPerMinute">
+            <summary>Tentativas de login por IP por minuto (além do bloqueio por usuário do Identity).</summary>
+        </member>
+        <member name="P:FinFlow.API.Security.AuthOptions.MaxFailedAccessAttempts">
+            <summary>Senhas erradas seguidas até bloquear o usuário.</summary>
+        </member>
+        <member name="T:FinFlow.API.Security.FinFlowSignInManager">
+            <summary>Usuário desativado não entra (nem com a senha certa).</summary>
+        </member>
+        <member name="M:FinFlow.API.Security.FinFlowSignInManager.#ctor(Microsoft.AspNetCore.Identity.UserManager{FinFlow.Infrastructure.Identity.AppUser},Microsoft.AspNetCore.Http.IHttpContextAccessor,Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory{FinFlow.Infrastructure.Identity.AppUser},Microsoft.Extensions.Options.IOptions{Microsoft.AspNetCore.Identity.IdentityOptions},Microsoft.Extensions.Logging.ILogger{Microsoft.AspNetCore.Identity.SignInManager{FinFlow.Infrastructure.Identity.AppUser}},Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,Microsoft.AspNetCore.Identity.IUserConfirmation{FinFlow.Infrastructure.Identity.AppUser})">
+            <summary>Usuário desativado não entra (nem com a senha certa).</summary>
+        </member>
+        <member name="T:FinFlow.API.Security.FinFlowClaimsPrincipalFactory">
+            <summary>Claims emitidas no login (roles vêm do banco via Identity, nunca do cliente).</summary>
+        </member>
+        <member name="M:FinFlow.API.Security.FinFlowClaimsPrincipalFactory.#ctor(Microsoft.AspNetCore.Identity.UserManager{FinFlow.Infrastructure.Identity.AppUser},Microsoft.AspNetCore.Identity.RoleManager{Microsoft.AspNetCore.Identity.IdentityRole},Microsoft.Extensions.Options.IOptions{Microsoft.AspNetCore.Identity.IdentityOptions})">
+            <summary>Claims emitidas no login (roles vêm do banco via Identity, nunca do cliente).</summary>
+        </member>
+        <member name="T:FinFlow.API.Security.HttpCurrentUser">
+            <summary>Usuário da requisição, a partir das claims do cookie validado pelo servidor.</summary>
+        </member>
+        <member name="M:FinFlow.API.Security.HttpCurrentUser.#ctor(Microsoft.AspNetCore.Http.IHttpContextAccessor)">
+            <summary>Usuário da requisição, a partir das claims do cookie validado pelo servidor.</summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Type)">
+            <summary>
+            Generates a documentation comment ID for a type.
+            Example: T:Namespace.Outer+Inner`1 becomes T:Namespace.Outer.Inner`1
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Reflection.PropertyInfo)">
+            <summary>
+            Generates a documentation comment ID for a property.
+            Example: P:Namespace.ContainingType.PropertyName or for an indexer P:Namespace.ContainingType.Item(System.Int32)
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Type,System.String)">
+            <summary>
+            Generates a documentation comment ID for a property given its container type and property name.
+            Example: P:Namespace.ContainingType.PropertyName
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Reflection.MethodInfo)">
+            <summary>
+            Generates a documentation comment ID for a method (or constructor).
+            For example:
+              M:Namespace.ContainingType.MethodName(ParamType1,ParamType2)~ReturnType
+              M:Namespace.ContainingType.#ctor(ParamType)
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.GetTypeDocId(System.Type,System.Boolean,System.Boolean)">
+            <summary>
+            Generates a documentation ID string for a type.
+            This method handles nested types (replacing '+' with '.'),
+            generic types, arrays, pointers, by-ref types, and generic parameters.
+            The <paramref name="includeGenericArguments"/> flag controls whether
+            constructed generic type arguments are emitted, while <paramref name="omitGenericArity"/>
+            controls whether the generic arity marker (e.g. "`1") is appended.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.NormalizeDocId(System.String)">
+            <summary>
+            Normalizes a documentation comment ID to match the compiler-style format.
+            Strips the return type suffix for ordinary methods but retains it for conversion operators.
+            </summary>
+            <param name="docId">The documentation comment ID to normalize.</param>
+            <returns>The normalized documentation comment ID.</returns>
+        </member>
+    </members>
+</doc>

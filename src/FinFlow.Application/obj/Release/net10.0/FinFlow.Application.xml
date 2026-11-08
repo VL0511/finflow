@@ -1,0 +1,732 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FinFlow.Application</name>
+    </assembly>
+    <members>
+        <member name="T:FinFlow.Application.Accounts.CreateAccountRequest">
+            <summary>
+            Dados para abertura de conta. O NÚMERO É GERADO PELO BACKEND (10 dígitos com verificador)
+            e devolvido na resposta; não é aceito no pedido.
+            </summary>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.CreateAccountRequest.HolderName">
+            <summary>Nome do titular.</summary>
+            <example>Fernanda Lima</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.CreateAccountRequest.InitialBalance">
+            <summary>Saldo inicial (não pode ser negativo; casas decimais conforme a moeda).</summary>
+            <example>1500.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.CreateAccountRequest.Currency">
+            <summary>Moeda da conta (deve estar cadastrada e ativa). O saldo é sempre mantido nela.</summary>
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.CreateAccountRequest.IsActive">
+            <summary>Se a conta nasce ativa. Use false para testar a regra de conta inativa.</summary>
+            <example>true</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.CreateAccountRequest.OwnerUserId">
+            <summary>
+            Dono da conta. Só o Administrator escolhe (ou omite, para conta institucional);
+            para o Customer é sempre ele mesmo — o valor enviado é ignorado.
+            </summary>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.Id">
+            <example>a1b2c3d4-0000-0000-0000-000000000001</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.AccountNumber">
+            <example>12345</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.HolderName">
+            <example>Ana Souza</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.Balance">
+            <example>1000.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.Currency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.IsActive">
+            <example>true</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountResponse.OwnerUserId">
+            <summary>Dono da conta (nulo em contas institucionais/legadas).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountBalanceResponse.AccountId">
+            <example>a1b2c3d4-0000-0000-0000-000000000001</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountBalanceResponse.AccountNumber">
+            <example>12345</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountBalanceResponse.Balance">
+            <example>1000.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountBalanceResponse.Currency">
+            <example>BRL</example>
+        </member>
+        <member name="T:FinFlow.Application.Accounts.AccountCurrencySummary">
+            <summary>Totais de uma moeda (GET /api/accounts/summary). Sem conversão cambial: moedas nunca são somadas entre si.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountCurrencySummary.Currency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountCurrencySummary.Accounts">
+            <summary>Quantidade de contas nesta moeda.</summary>
+            <example>3</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountCurrencySummary.ActiveAccounts">
+            <summary>Contas ativas nesta moeda.</summary>
+            <example>2</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountCurrencySummary.TotalBalance">
+            <summary>Soma dos saldos de todas as contas nesta moeda (ativas e inativas).</summary>
+            <example>1550.00</example>
+        </member>
+        <member name="T:FinFlow.Application.Accounts.AccountSummaryResponse">
+            <summary>Indicadores globais de contas, calculados no banco (independem da paginação).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountSummaryResponse.TotalAccounts">
+            <example>4</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountSummaryResponse.ActiveAccounts">
+            <example>3</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountSummaryResponse.InactiveAccounts">
+            <example>1</example>
+        </member>
+        <member name="P:FinFlow.Application.Accounts.AccountSummaryResponse.Balances">
+            <summary>Totais por moeda, em ordem alfabética de moeda.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Accounts.IAccountNumberGenerator">
+            <summary>Gera números de conta. Exclusivo do backend: o cliente nunca escolhe o número.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Accounts.RandomAccountNumberGenerator">
+            <summary>
+            10 dígitos: 9 aleatórios (gerador criptográfico, sem sequência previsível nem enumeração
+            fácil) + 1 dígito verificador de Luhn (detecta erros de digitação na conta de destino).
+            ~900 milhões de combinações; a unicidade é garantida pelo índice UNIQUE do banco e o
+            serviço tenta outro número em caso de colisão.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.RandomAccountNumberGenerator.IsValid(System.String)">
+            <summary>Número com o tamanho certo e dígito verificador válido.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.IAccountService.GetAccessibleAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>Conta pelo ID, já conferindo o escopo do usuário (fora do escopo = 404).</summary>
+        </member>
+        <member name="F:FinFlow.Application.Accounts.AccountService.MaxNumberAttempts">
+            <summary>Tentativas de gerar um número livre (colisões são raríssimas: ~900 milhões de números).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.AccountService.ResolveOwnerAsync(FinFlow.Application.Accounts.CreateAccountRequest,System.Threading.CancellationToken)">
+            <summary>Customer: sempre ele mesmo. Administrator: o informado (deve existir e estar ativo) ou nenhum.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Accounts.CreateAccountRequestValidator">
+            <summary>
+            Validação de formato. Existência/atividade da moeda e casas decimais por moeda são
+            conferidas no AccountService (dependem do cadastro de moedas).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.IAccountRepository.GetPairForUpdateAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Carrega e BLOQUEIA (UPDLOCK) as contas de origem e destino até o fim da transação SQL corrente,
+            sempre na mesma ordem determinística (número da conta, ordinal) para evitar deadlock entre
+            transferências cruzadas. Exige uma transação ativa (IUnitOfWork.ExecuteInTransactionAsync).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.IAccountRepository.ListAsync(FinFlow.Application.Common.PageRequest,FinFlow.Application.Common.AccessScope,System.Threading.CancellationToken)">
+            <summary>
+            Página de contas ordenada por número da conta (e Id, como desempate determinístico).
+            Contagem e página são consultadas no banco (COUNT + OFFSET/FETCH).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.IAccountRepository.SummarizeByCurrencyAsync(FinFlow.Application.Common.AccessScope,System.Threading.CancellationToken)">
+            <summary>Quantidade de contas, ativas e soma dos saldos, agrupados por moeda (agregação no banco).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Accounts.IAccountRepository.ListNumbersByOwnerAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Números das contas de um dono (escopo de visibilidade de transações do Customer).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.IAuditTrail">
+            <summary>
+            Trilha de auditoria. O registro entra no MESMO SaveChanges/commit da operação auditada:
+            se a operação for desfeita, o registro também é (nada é auditado sem ter acontecido).
+            O responsável (usuário atual) é preenchido pela implementação.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.IAuditTrail.Record(System.String,System.String,System.String,System.Object,System.String)">
+            <summary>
+            Adiciona um registro à unidade de trabalho atual. <c>details</c> é serializado como JSON:
+            nunca passe senhas, tokens ou hashes.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.IAuditTrail.RecordFor(System.String,System.String,System.String,System.String,System.String,System.Object,System.String)">
+            <summary>Como <see cref="M:FinFlow.Application.Common.IAuditTrail.Record(System.String,System.String,System.String,System.Object,System.String)"/>, com o responsável explícito (ex.: login, antes de haver sessão).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.AuditActions">
+            <summary>Tipos de operação auditados.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Common.AuditLogResponse.Details">
+            <summary>JSON com os detalhes da operação.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.AuditLogQuery">
+            <summary>Filtros de GET /api/admin/audit-logs (combinados com AND).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.IAuditLogReader">
+            <summary>Leitura da auditoria. Não existe operação de alteração ou exclusão.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.ConflictException">
+            <summary>O recurso já existe (ex.: número de conta duplicado).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.ConflictException.#ctor(System.String)">
+            <summary>O recurso já existe (ex.: número de conta duplicado).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.ConcurrencyConflictException">
+            <summary>
+            O registro foi alterado por outro processo entre a leitura e a gravação
+            (concorrência otimista via rowversion).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.ConcurrencyConflictException.#ctor(System.String,System.Exception)">
+            <summary>
+            O registro foi alterado por outro processo entre a leitura e a gravação
+            (concorrência otimista via rowversion).
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.UniqueConstraintViolationException">
+            <summary>
+            Violação de índice/constraint UNIQUE no banco (ex.: dois cadastros simultâneos gerando o mesmo
+            número de conta, ou duas taxas vigentes para a mesma direção).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.UniqueConstraintViolationException.#ctor(System.String,System.Exception)">
+            <summary>
+            Violação de índice/constraint UNIQUE no banco (ex.: dois cadastros simultâneos gerando o mesmo
+            número de conta, ou duas taxas vigentes para a mesma direção).
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.ForbiddenException">
+            <summary>Operação proibida para o usuário atual mesmo estando autenticado (HTTP 403).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.ForbiddenException.#ctor(System.String)">
+            <summary>Operação proibida para o usuário atual mesmo estando autenticado (HTTP 403).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.IUnitOfWork.SaveChangesAsync(System.Threading.CancellationToken)">
+            <summary>Persiste todas as alterações pendentes de forma atômica.</summary>
+            <exception cref="T:FinFlow.Application.Common.ConcurrencyConflictException">Registro alterado por outro processo.</exception>
+            <exception cref="T:FinFlow.Application.Common.UniqueConstraintViolationException">Valor duplicado em índice UNIQUE.</exception>
+        </member>
+        <member name="M:FinFlow.Application.Common.IUnitOfWork.DiscardChanges">
+            <summary>Descarta as alterações pendentes (ex.: para tentar de novo após uma colisão de UNIQUE).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.IUnitOfWork.ExecuteInTransactionAsync(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Threading.CancellationToken)">
+            <summary>
+            Executa <paramref name="operation"/> dentro de uma transação SQL explícita.
+            Ao final, todas as alterações são salvas e comitadas juntas; qualquer
+            exceção provoca rollback completo. A operação deve (re)carregar as
+            entidades que vai alterar, pois pode ser reexecutada em falhas transitórias.
+            </summary>
+            <exception cref="T:FinFlow.Application.Common.ConcurrencyConflictException">Registro alterado por outro processo.</exception>
+        </member>
+        <member name="T:FinFlow.Application.Common.PageRequest">
+            <summary>
+            Página solicitada, já normalizada: página &lt; 1 vira 1; tamanho ausente ou &lt; 1 vira
+            <see cref="F:FinFlow.Application.Common.PageRequest.DefaultPageSize"/>; tamanho acima de <see cref="F:FinFlow.Application.Common.PageRequest.MaxPageSize"/> é limitado a ele.
+            Os valores efetivos voltam na resposta (<see cref="T:FinFlow.Application.Common.PagedResult`1"/>), então o cliente
+            sempre sabe o que foi aplicado.
+            </summary>
+        </member>
+        <member name="F:FinFlow.Application.Common.PageRequest.MaxPage">
+            <summary>Maior página cujo deslocamento ainda cabe em int (evita overflow em Skip).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Common.PageRequest.Skip">
+            <summary>Quantidade de registros a pular (deslocamento no banco).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.PagedResult`1">
+            <summary>Resposta paginada padrão das listagens.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.Items">
+            <summary>Registros da página (vazio se a página estiver além da última).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.Page">
+            <summary>Página efetivamente retornada (começa em 1).</summary>
+            <example>1</example>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.PageSize">
+            <summary>Tamanho de página efetivamente aplicado (máx. 100).</summary>
+            <example>10</example>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.TotalItems">
+            <summary>Total de registros que atendem aos filtros (todas as páginas).</summary>
+            <example>45</example>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.TotalPages">
+            <summary>Total de páginas (0 quando não há registros).</summary>
+            <example>5</example>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.HasPreviousPage">
+            <example>false</example>
+        </member>
+        <member name="P:FinFlow.Application.Common.PagedResult`1.HasNextPage">
+            <example>true</example>
+        </member>
+        <member name="M:FinFlow.Application.Common.PagedResult`1.Map``1(System.Func{`0,``0})">
+            <summary>Converte os itens mantendo os metadados de paginação.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.Roles">
+            <summary>Perfis (roles) do sistema. Fonte única dos nomes usados nas policies e no seed.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.ICurrentUser">
+            <summary>
+            Usuário da requisição atual. Na API vem do cookie de autenticação (claims emitidas pelo
+            servidor — nunca de dados enviados pelo frontend); no Worker é o "sistema" (não autenticado).
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.AccessScope">
+            <summary>
+            Escopo de dados do usuário — ÚNICO ponto que decide quais contas cada perfil enxerga.
+            - Administrator e Treasurer: todas as contas (operação da instituição);
+            - Customer: somente as contas das quais é dono;
+            - sem usuário (Worker/sistema): todas.
+            Para restringir o Treasurer a carteiras específicas no futuro, basta mudar aqui.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Common.AccessScope.#ctor(System.String)">
+            <summary>
+            Escopo de dados do usuário — ÚNICO ponto que decide quais contas cada perfil enxerga.
+            - Administrator e Treasurer: todas as contas (operação da instituição);
+            - Customer: somente as contas das quais é dono;
+            - sem usuário (Worker/sistema): todas.
+            Para restringir o Treasurer a carteiras específicas no futuro, basta mudar aqui.
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Common.SystemCurrentUser">
+            <summary>Usuário "sistema" (Worker, seed, testes): sem identidade, escopo irrestrito.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CurrencyResponse.Code">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CurrencyResponse.Name">
+            <example>Real brasileiro</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CurrencyResponse.DecimalPlaces">
+            <example>2</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CurrencyResponse.IsActive">
+            <example>true</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CreateCurrencyRequest.Code">
+            <summary>Código ISO 4217.</summary>
+            <example>GBP</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CreateCurrencyRequest.Name">
+            <example>Libra esterlina</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.CreateCurrencyRequest.DecimalPlaces">
+            <summary>Casas decimais (0 a 2).</summary>
+            <example>2</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.UpdateCurrencyRequest.IsActive">
+            <summary>true ativa, false desativa (novas contas/transferências deixam de aceitá-la).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Currencies.ICurrencyService.GetActiveOrThrowAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Moeda existente e ativa, ou DomainException (422) com mensagem clara.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.ExchangeRateResponse.FromCurrency">
+            <example>USD</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.ExchangeRateResponse.ToCurrency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.ExchangeRateResponse.Rate">
+            <summary>1 unidade de FromCurrency = Rate unidades de ToCurrency.</summary>
+            <example>5.2</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.SetExchangeRateRequest.FromCurrency">
+            <example>USD</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.SetExchangeRateRequest.ToCurrency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.SetExchangeRateRequest.Rate">
+            <example>5.20</example>
+        </member>
+        <member name="T:FinFlow.Application.Currencies.ExchangeQuote">
+            <summary>Resultado de uma conversão calculada no backend (prévia ou transferência).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.ExchangeQuote.Rate">
+            <summary>1 na mesma moeda.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Currencies.ExchangeQuote.RateId">
+            <summary>Versão da taxa usada; nula na mesma moeda.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Currencies.IExchangeRateRepository.ListHistoryAsync(System.String,System.String,FinFlow.Application.Common.PageRequest,System.Threading.CancellationToken)">
+            <summary>Todas as versões (vigentes e encerradas), mais recentes primeiro.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Currencies.IExchangeRateService.QuoteAsync(System.String,System.String,System.Decimal,System.Threading.CancellationToken)">
+            <summary>
+            Converte <paramref name="amount"/> (na moeda <paramref name="from"/>) usando a taxa vigente.
+            Única implementação de conversão do sistema: usada na prévia e na criação da transferência.
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Messaging.IIntegrationMessage">
+            <summary>Mensagem trafegada pelo RabbitMQ.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Messaging.IIntegrationMessage.MessageType">
+            <summary>Tipo da mensagem, usado também como routing key.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Messaging.IMessageOutbox">
+            <summary>
+            Outbox transacional: a mensagem é gravada na mesma transação SQL da
+            alteração de negócio e publicada no RabbitMQ depois, em background.
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Messaging.TransactionRequested">
+            <summary>Uma transferência foi solicitada e aguarda processamento pelo Worker.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Messaging.TransactionRequested.#ctor(System.Guid,System.String,System.String,System.Decimal,System.String,System.DateTimeOffset)">
+            <summary>Uma transferência foi solicitada e aguarda processamento pelo Worker.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.GetByIdForUpdateAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Carrega e BLOQUEIA (UPDLOCK) a transação até o fim da transação SQL corrente.
+            Serializa processamentos concorrentes da mesma transação (mensagem duplicada,
+            várias instâncias do Worker, recuperação). Exige uma transação ativa.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.ListStaleProcessingAsync(System.DateTimeOffset,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            IDs das transações paradas em Processing desde antes de <paramref name="olderThan"/>
+            (ex.: mensagem enviada à DLQ depois da etapa 1), das mais antigas para as mais novas.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.ListStalePendingAsync(System.DateTimeOffset,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            IDs das transações em Pending criadas antes de <paramref name="olderThan"/> (mensagem perdida
+            antes da etapa 1), das mais antigas para as mais novas. É só uma lista de candidatas: o status
+            pode mudar depois da consulta, e quem decide é o ProcessTransactionHandler (rowversion + UPDLOCK).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.ListAsync(FinFlow.Application.Transactions.TransactionListFilter,FinFlow.Application.Common.PageRequest,System.Threading.CancellationToken)">
+            <summary>
+            Página de transações que atendem ao filtro, da mais recente para a mais antiga
+            (CreatedAt desc, Id desc como desempate). Contagem e página usam a mesma consulta filtrada.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.CountByStatusAsync(System.Collections.Generic.IReadOnlyCollection{System.String},System.Threading.CancellationToken)">
+            <summary>
+            Quantidade de transações por status (agregação no banco). Status sem registros não aparecem.
+            <paramref name="visibleAccounts"/>: escopo do usuário (nulo = todas).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ITransactionRepository.GetDailyCashFlowAsync(System.String,System.DateTimeOffset,System.DateTimeOffset,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Entradas/saídas por dia das transferências COMPLETED da conta, liquidadas em
+            [<paramref name="from"/>, <paramref name="toExclusive"/>). O dia é o de UpdatedAt
+            (momento da liquidação) deslocado por <paramref name="utcOffsetMinutes"/>.
+            </summary>
+        </member>
+        <member name="F:FinFlow.Application.Transactions.ProcessTransactionOutcome.Skipped">
+            <summary>Mensagem duplicada ou transação já finalizada/cancelada: nada foi feito.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.ProcessTransactionHandler">
+             <summary>
+             Caso de uso executado pelo Worker ao consumir TransactionRequested.
+            
+             Idempotência: o status da transação é a fonte da verdade. A movimentação de
+             saldo só acontece no mesmo commit que leva a transação de Processing para
+             Completed. Se a mensagem chegar de novo, a transação já estará finalizada
+             e é ignorada.
+            
+             Concorrência: a etapa 2 bloqueia (UPDLOCK) a transação e depois as duas contas
+             em ordem determinística, então instâncias concorrentes se serializam em vez de
+             conflitar, sem risco de deadlock. O rowversion segue como proteção adicional:
+             se algo escapar do bloqueio, o commit falha com rollback e o Worker reprocessa.
+             </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.ProcessTransactionHandler.#ctor(FinFlow.Application.Transactions.ITransactionRepository,FinFlow.Application.Accounts.IAccountRepository,FinFlow.Application.Common.IUnitOfWork,FinFlow.Application.Common.IAuditTrail,Microsoft.Extensions.Logging.ILogger{FinFlow.Application.Transactions.ProcessTransactionHandler})">
+             <summary>
+             Caso de uso executado pelo Worker ao consumir TransactionRequested.
+            
+             Idempotência: o status da transação é a fonte da verdade. A movimentação de
+             saldo só acontece no mesmo commit que leva a transação de Processing para
+             Completed. Se a mensagem chegar de novo, a transação já estará finalizada
+             e é ignorada.
+            
+             Concorrência: a etapa 2 bloqueia (UPDLOCK) a transação e depois as duas contas
+             em ordem determinística, então instâncias concorrentes se serializam em vez de
+             conflitar, sem risco de deadlock. O rowversion segue como proteção adicional:
+             se algo escapar do bloqueio, o commit falha com rollback e o Worker reprocessa.
+             </summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.CreateTransactionRequest">
+            <summary>Dados para solicitar uma transferência.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.CreateTransactionRequest.SourceAccount">
+            <summary>Número da conta de origem.</summary>
+            <example>12345</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.CreateTransactionRequest.DestinationAccount">
+            <summary>Número da conta de destino. Deve ser diferente da origem.</summary>
+            <example>67890</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.CreateTransactionRequest.Amount">
+            <summary>Valor da transferência. Maior que zero, com até 2 casas decimais.</summary>
+            <example>500.00</example>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransactionResponse">
+            <summary>Representação de uma transação.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.Id">
+            <summary>Identificador gerado pela API.</summary>
+            <example>3fa85f64-5717-4562-b3fc-2c963f66afa6</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.SourceAccount">
+            <example>12345</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.DestinationAccount">
+            <example>67890</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.Amount">
+            <summary>Valor debitado da origem, na moeda da origem.</summary>
+            <example>500.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.Currency">
+            <summary>Moeda da origem (do valor debitado).</summary>
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.DestinationCurrency">
+            <summary>Moeda do destino (do valor creditado). Igual a Currency quando não há câmbio.</summary>
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.DestinationAmount">
+            <summary>Valor creditado no destino, convertido e arredondado na criação (snapshot imutável).</summary>
+            <example>500.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.ExchangeRate">
+            <summary>Taxa aplicada no momento da criação (1 na mesma moeda).</summary>
+            <example>1</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.ExchangeRateId">
+            <summary>Versão da taxa usada (nula na mesma moeda).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.RequestedByUserId">
+            <summary>Usuário que solicitou (nulo em transações anteriores à autenticação).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.Status">
+            <summary>Pending, Processing, Completed, Failed ou Cancelled.</summary>
+            <example>Pending</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionResponse.FailureReason">
+            <summary>Motivo da falha, quando Status = Failed.</summary>
+            <example>null</example>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransferPreviewResponse">
+            <summary>
+            Prévia de uma transferência (POST /api/transactions/preview). Calculada pelo mesmo código da
+            criação; a criação recalcula tudo e nunca usa valores enviados pelo cliente.
+            </summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.SourceCurrency">
+            <example>USD</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.DestinationCurrency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.Amount">
+            <example>100.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.DestinationAmount">
+            <summary>Valor estimado a receber no destino.</summary>
+            <example>520.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.ExchangeRate">
+            <example>5.2</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransferPreviewResponse.DestinationHolder">
+            <summary>Titular do destino, mascarado para confirmação (ex.: "Ana S.").</summary>
+            <example>Bruno L.</example>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransactionListQuery">
+            <summary>Filtros de GET /api/transactions (combinados com AND; aplicados no banco antes da paginação).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionListQuery.Status">
+            <summary>
+            Status aceitos (Pending, Processing, Completed, Failed, Cancelled), sem diferenciar maiúsculas.
+            Aceita parâmetro repetido (<c>status=Pending&amp;status=Processing</c>) ou separado por vírgula
+            (<c>status=Pending,Processing</c>). Vazio = todos.
+            </summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionListQuery.AccountNumber">
+            <summary>Número de conta presente como origem OU destino.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransactionListFilter">
+            <summary>
+            Filtro já validado, repassado ao repositório. <c>VisibleAccounts</c> é o escopo do usuário:
+            só transações em que alguma destas contas é origem ou destino; nulo = sem restrição
+            (Administrator, Treasurer, sistema).
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionListFilter.#ctor(System.Collections.Generic.IReadOnlyCollection{FinFlow.Domain.Enums.TransactionStatus},System.String,System.Collections.Generic.IReadOnlyCollection{System.String})">
+            <summary>
+            Filtro já validado, repassado ao repositório. <c>VisibleAccounts</c> é o escopo do usuário:
+            só transações em que alguma destas contas é origem ou destino; nulo = sem restrição
+            (Administrator, Treasurer, sistema).
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.AccountCashFlowQuery">
+            <summary>Período de GET /api/accounts/{id}/cash-flow.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowQuery.From">
+            <summary>Primeiro dia (inclusivo, no fuso de <see cref="P:FinFlow.Application.Transactions.AccountCashFlowQuery.UtcOffsetMinutes"/>). Padrão: <c>To</c> − 29 dias.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowQuery.To">
+            <summary>Último dia (inclusivo). Padrão: hoje no fuso informado.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowQuery.UtcOffsetMinutes">
+            <summary>
+            Deslocamento do fuso do cliente em relação ao UTC, em minutos (ex.: -180 para Brasília).
+            Define em que dia cada liquidação cai. Padrão: 0 (UTC).
+            </summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.DailyCashFlow">
+            <summary>Entradas e saídas liquidadas de uma conta em um dia (agregado no banco).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.DailyCashFlow.Date">
+            <example>2026-11-06</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.DailyCashFlow.Inflow">
+            <summary>Soma das transferências concluídas em que a conta é destino.</summary>
+            <example>500.00</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.DailyCashFlow.Outflow">
+            <summary>Soma das transferências concluídas em que a conta é origem.</summary>
+            <example>120.00</example>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.AccountCashFlowResponse">
+            <summary>Série diária de movimentações liquidadas de uma conta (GET /api/accounts/{id}/cash-flow).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowResponse.AccountNumber">
+            <example>12345</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowResponse.Currency">
+            <example>BRL</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowResponse.UtcOffsetMinutes">
+            <example>-180</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.AccountCashFlowResponse.Days">
+            <summary>Somente os dias com movimento, em ordem crescente (dias ausentes = sem movimento).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransactionSummaryResponse">
+            <summary>Contagem global de transações por status (GET /api/transactions/summary).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.TotalTransactions">
+            <example>11</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.Pending">
+            <example>3</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.Processing">
+            <example>0</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.Completed">
+            <example>3</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.Failed">
+            <example>4</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionSummaryResponse.Cancelled">
+            <example>1</example>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.CreateAsync(FinFlow.Application.Transactions.CreateTransactionRequest,System.Threading.CancellationToken)">
+            <summary>
+            Registra a transação como Pending e enfileira o evento TransactionRequested
+            no outbox. Transação, evento, snapshot do câmbio e auditoria são gravados no mesmo
+            SaveChanges (atômico); a publicação no RabbitMQ acontece depois, em background. A
+            movimentação de saldo é feita pelo Worker, usando exatamente o snapshot gravado aqui.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.PrepareAsync(FinFlow.Application.Transactions.CreateTransactionRequest,System.Threading.CancellationToken)">
+            <summary>
+            Validações comuns à prévia e à criação. A consulta prévia falha rápido se as contas não
+            existirem e define as moedas; o Worker revalida situação, saldo e moedas no processamento.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.MaskHolder(System.String)">
+            <summary>"Bruno Lima Souza" → "Bruno S.": suficiente para confirmar sem expor o nome completo.</summary>
+        </member>
+        <member name="F:FinFlow.Application.Transactions.TransactionService.MaxCashFlowDays">
+            <summary>Maior período aceito por GET /api/accounts/{id}/cash-flow (≈ 2 anos).</summary>
+        </member>
+        <member name="F:FinFlow.Application.Transactions.TransactionService.MaxUtcOffsetMinutes">
+            <summary>Faixa de fusos horários reais (UTC−14 a UTC+14).</summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.ParseStatuses(System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>
+            Converte os status do query string. Aceita nomes (sem diferenciar maiúsculas), repetidos
+            ou separados por vírgula; números e nomes inexistentes geram 400 em vez de serem ignorados.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.CancelAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>
+            Solicita o cancelamento. Só é aceito enquanto a transação está Pending:
+            depois que o Worker iniciou o processamento, o dinheiro pode já ter sido movido.
+            O Customer só cancela transferências que saem de contas dele.
+            </summary>
+        </member>
+        <member name="M:FinFlow.Application.Transactions.TransactionService.VisibleAccountsAsync(System.Threading.CancellationToken)">
+            <summary>Contas visíveis ao usuário (nulo = sem restrição). Derivado do AccessScope central.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Transactions.TransactionStatusResponse">
+            <summary>Situação atual de uma transação (GET /api/transactions/{id}/status).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionStatusResponse.Id">
+            <example>3fa85f64-5717-4562-b3fc-2c963f66afa6</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionStatusResponse.Status">
+            <summary>Pending, Processing, Completed, Failed ou Cancelled.</summary>
+            <example>Completed</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionStatusResponse.FailureReason">
+            <summary>Motivo da falha, quando Status = Failed.</summary>
+            <example>null</example>
+        </member>
+        <member name="P:FinFlow.Application.Transactions.TransactionStatusResponse.UpdatedAt">
+            <summary>Data da última mudança de status.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Users.UserResponse.Email">
+            <example>tesouraria@finflow.com</example>
+        </member>
+        <member name="P:FinFlow.Application.Users.UserResponse.FullName">
+            <example>Maria Tesoureira</example>
+        </member>
+        <member name="P:FinFlow.Application.Users.UserResponse.Role">
+            <summary>Administrator, Treasurer ou Customer.</summary>
+            <example>Treasurer</example>
+        </member>
+        <member name="P:FinFlow.Application.Users.UserResponse.MustChangePassword">
+            <summary>A senha precisa ser trocada no próximo login.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Users.UserResponse.IsLockedOut">
+            <summary>Bloqueado temporariamente por tentativas de login inválidas.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Users.CreateUserRequest.Password">
+            <summary>Senha inicial (política do Identity). Nunca registrada em logs ou auditoria.</summary>
+        </member>
+        <member name="P:FinFlow.Application.Users.CreateUserRequest.RequirePasswordChange">
+            <summary>Exige troca da senha no primeiro login (recomendado para senhas definidas pelo administrador).</summary>
+        </member>
+        <member name="P:FinFlow.Application.Users.ResetPasswordRequest.NewPassword">
+            <summary>Nova senha temporária; o usuário deverá trocá-la no próximo login.</summary>
+        </member>
+        <member name="T:FinFlow.Application.Users.IUserManagementService">
+            <summary>Administração de usuários (somente Administrator). Implementada sobre o ASP.NET Core Identity.</summary>
+        </member>
+        <member name="M:FinFlow.Application.Users.IUserManagementService.UpdateAsync(System.String,FinFlow.Application.Users.UpdateUserRequest,System.Threading.CancellationToken)">
+            <summary>Ninguém altera o próprio perfil nem se desativa (evita autoelevação e bloqueio do último admin).</summary>
+        </member>
+        <member name="T:FinFlow.Application.Users.IUserDirectory">
+            <summary>Consultas mínimas sobre usuários usadas por outros módulos.</summary>
+        </member>
+    </members>
+</doc>

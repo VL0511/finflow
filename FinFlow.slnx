@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FinFlow.API/FinFlow.API.csproj" />
+    <Project Path="src/FinFlow.Application/FinFlow.Application.csproj" />
+    <Project Path="src/FinFlow.Domain/FinFlow.Domain.csproj" />
+    <Project Path="src/FinFlow.Infrastructure/FinFlow.Infrastructure.csproj" />
+    <Project Path="src/FinFlow.Worker/FinFlow.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FinFlow.IntegrationTests/FinFlow.IntegrationTests.csproj" />
+    <Project Path="tests/FinFlow.UnitTests/FinFlow.UnitTests.csproj" />
+  </Folder>
+</Solution>

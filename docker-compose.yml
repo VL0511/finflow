@@ -1,0 +1,32 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: finflow-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "FinFlow_Local_Dev_2026!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - finflow_data:/var/opt/mssql
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: finflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "finflow"
+      RABBITMQ_DEFAULT_PASS: "finflow_dev"
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Painel de gerenciamento: http://localhost:15672
+    volumes:
+      - finflow_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  finflow_data:
+  finflow_rabbitmq:
