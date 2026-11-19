@@ -1,0 +1,15 @@
+# Normaliza fim de linha no repositório (LF); o Git converte para o padrão do SO no checkout.
+* text=auto
+
+*.sh    text eol=lf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binários
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.ico   binary
+*.dll   binary
+*.exe   binary

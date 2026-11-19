@@ -1,7 +1,0 @@
-{
-  "FinFlow.API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\vitor\\OneDrive\\Documentos\\portfolio\\FinFlow\\src\\FinFlow.API",
-  "FinFlow.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\vitor\\OneDrive\\Documentos\\portfolio\\FinFlow\\src\\FinFlow.Application",
-  "FinFlow.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\vitor\\OneDrive\\Documentos\\portfolio\\FinFlow\\src\\FinFlow.Domain",
-  "FinFlow.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\vitor\\OneDrive\\Documentos\\portfolio\\FinFlow\\src\\FinFlow.Infrastructure",
-  "FinFlow.Worker, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Users\\vitor\\OneDrive\\Documentos\\portfolio\\FinFlow\\src\\FinFlow.Worker"
-}

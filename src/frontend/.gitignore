@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Variáveis de ambiente (mantém apenas o exemplo)
+.env
+.env.*
+!.env.example
+
+# Testes / cobertura
+coverage
+*.tsbuildinfo

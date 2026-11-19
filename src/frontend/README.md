@@ -79,16 +79,28 @@ store, então página e filtro são preservados ao abrir um detalhe e voltar.
 4. Histórico e dashboard recarregam a página exibida e o resumo (5 s → 15 s) enquanto o resumo indicar
    transações em andamento no sistema, por até 3 min; a contagem no menu lateral vem do resumo.
 
-## Limitações do backend (documentadas, não simuladas)
+## Autenticação e permissões
 
-- **Contas não podem ser editadas nem excluídas** — a API só expõe criação e consulta.
-- **Sem histórico de saldo** — o saldo total não tem tendência/sparkline nem comparação com períodos anteriores.
-- **Sem dono de conta / workspace** — não existe "minhas contas" vs. "contrapartes". Entradas e saídas só fazem
-  sentido por conta (no sistema todo, cada transferência é entrada e saída ao mesmo tempo), por isso o gráfico
-  do dashboard tem seletor de conta.
-- **Seletores limitados a 100 contas** — formulário de transferência e gráfico do dashboard usam uma página de
-  100 contas (máximo da API); acima disso um aviso é exibido. Para volumes maiores: endpoint de busca de contas.
-- **Sem índices para o filtro por conta** — `accountNumber` filtra por `SourceAccount`/`DestinationAccount`,
-  colunas sem índice; com muitos registros, vale uma migration com índices nessas colunas.
-- **Sem conversão cambial** — saldos em USD/EUR aparecem à parte do total em BRL.
-- **Sem autenticação** — o usuário do cabeçalho é ilustrativo.
+- Sessão por cookie `HttpOnly` emitido pela API (`POST /api/auth/login`); o JavaScript nunca lê a sessão.
+- `GET /api/auth/me` restaura o usuário ao recarregar a página; o guard do router (`app/router/guard.ts`)
+  redireciona para o login e força a troca de senha quando a API exige.
+- O menu e as ações respeitam o perfil (`features/auth/permissions.ts`): Administrator, Treasurer ou Customer.
+  A autorização real é sempre da API; o frontend só esconde o que o perfil não pode usar.
+
+| Endpoint | Uso |
+|---|---|
+| `POST /api/auth/login` · `logout` · `change-password` | Login, logout e troca de senha |
+| `GET /api/auth/me` | Usuário da sessão |
+| `POST /api/transactions/preview` | Prévia da transferência (valor convertido e taxa) |
+| `GET/POST/PATCH /api/currencies` | Moedas |
+| `GET /api/exchange-rates` · `quote`, `POST`, `DELETE /{from}/{to}` | Taxas de câmbio |
+| `GET/POST/PATCH /api/admin/users`, `POST /{id}/reset-password` | Gestão de usuários |
+| `GET /api/admin/audit-logs` | Auditoria |
+
+## Limitações conhecidas
+
+- **Contas não podem ser editadas nem excluídas**: a API só expõe criação e consulta.
+- **Sem histórico de saldo**: o saldo total não tem tendência nem comparação com períodos anteriores.
+- **Totais por moeda**: o resumo mostra o saldo de cada moeda separadamente, sem consolidar via câmbio.
+- **Seletores limitados a 100 contas**: o formulário de transferência e o gráfico do dashboard usam uma página
+  de 100 contas (máximo da API); acima disso um aviso é exibido.
